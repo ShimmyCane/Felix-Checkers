@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Felix Checkers - Code Architecture & Summary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F8FAF9;
+      --card-bg: #FFFFFF;
+      --text-main: #2D3748;
+      --text-muted: #718096;
+      --accent: #4DABF7;
+      --accent-dark: #1971C2;
+      --border: 2.5px solid #2D3748;
+      --shadow: 0 5px 0 #2D3748;
+      --pill-bg: #E7F5FF;
+      --pill-text: #1864AB;
+      --code-bg: #F1F3F5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Fredoka', -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 30px 20px 80px 20px;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    header.doc-header {
+      background: #FFFDF9;
+      border: var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 32px 36px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: #EBFBEE;
+      color: #2B8A3E;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 2px solid #69DB7C;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #1A202C;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      margin-top: 4px;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      text-decoration: none;
+      background: var(--pill-bg);
+      color: var(--pill-text);
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 14px;
+      border: 2px solid var(--accent-dark);
+      transition: transform 0.15s;
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Architecture Graphical Overview */
+    .arch-diagram {
+      background: #FFFFFF;
+      border: var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 35px;
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .diagram-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .diagram-card {
+      background: #F8F9FA;
+      border: 2.5px solid #CBD5E0;
+      border-radius: 18px;
+      padding: 18px;
+      position: relative;
+    }
+
+    .diagram-card.hub {
+      border-color: #2D3748;
+      background: #FFF9DB;
+      box-shadow: 0 4px 0 #2D3748;
+    }
+
+    .diagram-card h3 {
+      font-size: 1.15rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .diagram-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Table of Contents */
+    .toc-card {
+      background: #FFFFFF;
+      border: var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 35px;
+    }
+
+    .toc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    .toc-table th, .toc-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 2px solid #EDF2F7;
+    }
+
+    .toc-table th {
+      background: #F1F3F5;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #4A5568;
+    }
+
+    .line-badge {
+      font-family: 'JetBrains Mono', monospace;
+      background: #EDF2F7;
+      border: 1px solid #CBD5E0;
+      padding: 3px 8px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #2B6CB0;
+    }
+
+    /* Code breakdown cards */
+    .breakdown-card {
+      background: #FFFFFF;
+      border: var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 25px;
+    }
+
+    .breakdown-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      color: #2D3748;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Variables Table */
+    .var-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .var-table th, .var-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 2px solid #EDF2F7;
+      vertical-align: top;
+    }
+
+    .var-table th {
+      background: #F8F9FA;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .var-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #D9480F;
+      font-size: 0.9rem;
+    }
+
+    .color-chip {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1.5px solid #2D3748;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    .tweak-hint {
+      background: #FFF9DB;
+      border-left: 4px solid #FCC419;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #7A5200;
+      margin-top: 6px;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Header -->
+    <header class="doc-header">
+      <div>
+        <div class="header-badge">Architecture &amp; Code Reference</div>
+        <h1>Felix Checkers - Code Summary</h1>
+        <p class="subtitle">Complete functional overview of <code>index.html</code> and adjacent modules (CSS &amp; JS)</p>
+      </div>
+      <div class="quick-links">
+        <a href="index.html" class="nav-btn">▶ Open Game</a>
+        <a href="#toc" class="nav-btn">📑 Table of Contents</a>
+        <a href="#variables" class="nav-btn">⚙️ Tweakable Variables</a>
+      </div>
+    </header>
+
+    <!-- Architecture Hub Overview -->
+    <section class="arch-diagram">
+      <h2 class="section-title">🗺️ System Architecture</h2>
+      <p>How <code>index.html</code> coordinates the client-side styling, synthesizer audio, checkers engine, and touch controller:</p>
+      
+      <div class="diagram-grid">
+        <div class="diagram-card hub">
+          <h3>📄 index.html</h3>
+          <p><strong>Main Application Shell:</strong> Renders semantic DOM, 8x8 grid coordinates, turn indicator, actions, and settings drawer.</p>
+        </div>
+        <div class="diagram-card">
+          <h3>🎨 style.css</h3>
+          <p><strong>Visual System:</strong> Light pastel palette, 3D radial piece gradients, iPad touch sizing, responsive layout, and bounce animations.</p>
+        </div>
+        <div class="diagram-card">
+          <h3>🔊 audio.js</h3>
+          <p><strong>Web Audio Synthesizer:</strong> Zero-dependency sound effects for clicks, captures, king promotions, and victory fanfare.</p>
+        </div>
+        <div class="diagram-card">
+          <h3>🧠 game.js</h3>
+          <p><strong>Core Logic Engine:</strong> 8x8 matrix state, 2-row/3-row setups, jumps, kinging, Felix chess pieces, and kid-friendly AI.</p>
+        </div>
+        <div class="diagram-card">
+          <h3>🎮 app.js</h3>
+          <p><strong>Interaction Controller:</strong> DOM event listeners, piece selection, AI move orchestration, drawer controls, and win popups.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table of Contents for index.html -->
+    <section class="toc-card" id="toc">
+      <h2 class="section-title">📑 index.html - Table of Contents by Line Number</h2>
+      <table class="toc-table">
+        <thead>
+          <tr>
+            <th>Line Range</th>
+            <th>Section Name</th>
+            <th>Element / ID</th>
+            <th>Functional Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="line-badge">Lines 1 - 11</span></td>
+            <td>Document Head</td>
+            <td><code>&lt;head&gt;</code></td>
+            <td>Metadata, iPad viewport tags (user-scalable=no), stylesheet linkage, Fredoka Google Font.</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 14 - 36</span></td>
+            <td>Game Header &amp; Status</td>
+            <td><code>header.game-header</code></td>
+            <td>Displays title, current mode tag (<code>#modeTag</code>), and Red vs Black live piece counters (<code>#redCount</code>, <code>#blackCount</code>).</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 39 - 68</span></td>
+            <td>Board Frame &amp; Grid</td>
+            <td><code>#boardGrid</code></td>
+            <td>Outer coordinate borders (A-H, 1-8) and the 64-square dynamic checkers board container.</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 70 - 81</span></td>
+            <td>Quick Actions Bar</td>
+            <td><code>.quick-actions</code></td>
+            <td>Large iPad-friendly buttons for Undo (<code>#btnUndo</code>), New Game (<code>#btnRestart</code>), and status message banner.</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 83 - 88</span></td>
+            <td>Floating Settings Trigger</td>
+            <td><code>#btnOpenSettings</code></td>
+            <td>Floating round gear icon positioned at the bottom right corner per iPad design specifications.</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 90 - 167</span></td>
+            <td>Settings &amp; Rules Drawer</td>
+            <td><code>#settingsDrawer</code></td>
+            <td>Slide-over options drawer: 2/3 row toggle, Felix Mode toggle, AI/PvP toggle, audio mute, and game rules.</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 169 - 180</span></td>
+            <td>Game Over Modal</td>
+            <td><code>#winModalOverlay</code></td>
+            <td>Celebratory victory popup with animated trophy, winner announcement, and "Play Again" button.</td>
+          </tr>
+          <tr>
+            <td><span class="line-badge">Lines 183 - 186</span></td>
+            <td>Script Load Order</td>
+            <td><code>&lt;script&gt;</code></td>
+            <td>Loads <code>audio.js</code> first, then <code>game.js</code> engine, then <code>app.js</code> UI controller.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Adjacent Files Variables & Parameters Breakdown -->
+    <section class="toc-card" id="variables">
+      <h2 class="section-title">⚙️ Adjacent Files: Variables, Definitions &amp; Tweak Guide</h2>
+      <p>All core settings and adjustable variables across <code>style.css</code>, <code>game.js</code>, <code>audio.js</code>, and <code>app.js</code>:</p>
+
+      <!-- style.css variables -->
+      <div class="breakdown-card" style="margin-top: 20px;">
+        <h3>🎨 1. style.css Variables (:root)</h3>
+        <p>Control the visual theme, board dimensions, colors, and iPad touch dimensions:</p>
+        <table class="var-table">
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Default Value</th>
+              <th>What It Controls</th>
+              <th>How to Tweak It</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="var-name">--sq-light</span></td>
+              <td><span class="color-chip" style="background: #FFF9EE;"></span><code>#FFF9EE</code></td>
+              <td>Color of light board squares (where Felix chess pieces start)</td>
+              <td>Change to any pastel cream, peach, or light wood tint.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">--sq-dark</span></td>
+              <td><span class="color-chip" style="background: #7CA992;"></span><code>#7CA992</code></td>
+              <td>Color of dark board squares (where standard checkers move)</td>
+              <td>Change to pastel navy, plum, or slate for alternative board themes.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">--piece-red</span></td>
+              <td><span class="color-chip" style="background: #FF6B6B;"></span><code>#FF6B6B</code></td>
+              <td>Primary color of Red team checkers</td>
+              <td>Tweak to coral, crimson, or amber.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">--piece-black</span></td>
+              <td><span class="color-chip" style="background: #343A40;"></span><code>#343A40</code></td>
+              <td>Primary color of Black team checkers</td>
+              <td>Tweak to royal midnight blue or deep forest charcoal.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">--board-max-size</span></td>
+              <td><code>min(84vw, 76vh, 600px)</code></td>
+              <td>Maximum board size for iPad screens</td>
+              <td>Adjust the maximum cap (e.g. <code>680px</code>) to resize the board for larger tablets.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- game.js variables -->
+      <div class="breakdown-card">
+        <h3>🧠 2. game.js Engine State &amp; Parameters</h3>
+        <p>Configures rules, piece counts, turn mechanics, and coordinates:</p>
+        <table class="var-table">
+          <thead>
+            <tr>
+              <th>Property / Variable</th>
+              <th>Allowed Values</th>
+              <th>Description</th>
+              <th>Effect of Changing</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="var-name">rowsOption</span></td>
+              <td><code>2</code> or <code>3</code></td>
+              <td>Number of starting checker rows per player</td>
+              <td><code>2</code> spawns 8 checkers (faster kid game); <code>3</code> spawns 12 checkers (classic).</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">variant</span></td>
+              <td><code>'standard'</code> | <code>'felix'</code></td>
+              <td>Game mode identifier</td>
+              <td>When set to <code>'felix'</code>, initializes Queen on D1/E8 and Bishops on B1, F1 / C8, G8.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">board[r][c]</span></td>
+              <td><code>Object</code> or <code>null</code></td>
+              <td>8x8 board matrix storing piece objects</td>
+              <td>Piece object structure: <code>{ player: 'red'|'black', type: 'checker'|'queen'|'bishop', isKing: boolean }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">isMultiJumping</span></td>
+              <td><code>true</code> | <code>false</code></td>
+              <td>Enforces multi-jump turn persistence</td>
+              <td>Locks player selection to the jumping piece until all available jump captures are completed.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">AI heuristic scoring</span></td>
+              <td>Numbers (5 to 25 pts)</td>
+              <td>Scores evaluated in <code>getBestAIMove()</code></td>
+              <td>Queen capture = +20, Bishop = +12, King = +8, Promotion = +5. Tweak to make AI easier or harder.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- audio.js variables -->
+      <div class="breakdown-card">
+        <h3>🔊 3. audio.js Synthesizer Parameters</h3>
+        <p>Frequencies and waveforms used for browser sound generation:</p>
+        <table class="var-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Waveform &amp; Frequency</th>
+              <th>Duration</th>
+              <th>Tweak Recommendation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="var-name">playMove()</span></td>
+              <td><code>triangle</code>: 320Hz &rarr; 160Hz</td>
+              <td>0.08s</td>
+              <td>Simulates tactile wooden click. Lower to 240Hz for a heavier clack.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">playCapture()</span></td>
+              <td><code>sine</code>: 440Hz &rarr; 880Hz</td>
+              <td>0.16s</td>
+              <td>Joyful rising sweep on capture. Increase pitch for higher playful sound.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">playKing()</span></td>
+              <td><code>triangle</code>: [523Hz, 659Hz, 784Hz]</td>
+              <td>0.22s</td>
+              <td>Ascending royal arpeggio (C5, E5, G5).</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">playWin()</span></td>
+              <td><code>sine</code>: [523Hz, 659Hz, 784Hz, 1046Hz]</td>
+              <td>0.35s</td>
+              <td>Celebratory fanfare (C5, E5, G5, C6).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- app.js variables -->
+      <div class="breakdown-card">
+        <h3>🎮 4. app.js Controller Variables</h3>
+        <p>UI synchronization, event timing, and user preferences:</p>
+        <table class="var-table">
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Default</th>
+              <th>Role</th>
+              <th>Tweak Possibility</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="var-name">currentConfig</span></td>
+              <td><code>{ rowsOption: 3, variant: 'standard', opponentType: 'pvp' }</code></td>
+              <td>Active game parameters applied to the engine</td>
+              <td>Can be updated dynamically via the settings drawer.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">isAiThinking</span></td>
+              <td><code>false</code></td>
+              <td>Input blocker during computer turns</td>
+              <td>Prevents accidental touch events on the iPad while the computer is calculating.</td>
+            </tr>
+            <tr>
+              <td><span class="var-name">AI delay timeouts</span></td>
+              <td><code>600ms</code> &amp; <code>350ms</code></td>
+              <td>Pacing delays for computer moves</td>
+              <td>Adjust between 300ms (faster) and 900ms (more suspenseful for children).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </div>
+</body>
+</html>
+

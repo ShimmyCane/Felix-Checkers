@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Felix Checkers</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header with friendly status -->
+    <header class="game-header">
+      <div class="title-badge">
+        <span class="title-icon">👑</span>
+        <h1 class="title-text">Felix Checkers</h1>
+        <span class="mode-tag" id="modeTag">Classic (3 Rows)</span>
+      </div>
+
+      <!-- Turn & Score Pill -->
+      <div class="status-pill" id="statusPill">
+        <div class="player-indicator" id="redIndicator">
+          <div class="mini-piece red-piece"></div>
+          <span class="player-name">Red</span>
+          <span class="score-count" id="redCount">12</span>
+        </div>
+        <div class="vs-divider">VS</div>
+        <div class="player-indicator" id="blackIndicator">
+          <div class="mini-piece black-piece"></div>
+          <span class="player-name">Black</span>
+          <span class="score-count" id="blackCount">12</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="board-wrapper">
+      <div class="board-frame">
+        <!-- Coordinate Labels Top -->
+        <div class="file-labels top-labels">
+          <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+        </div>
+
+        <div class="board-center-row">
+          <!-- Rank Labels Left -->
+          <div class="rank-labels left-labels">
+            <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+          </div>
+
+          <!-- 8x8 Board Grid -->
+          <div class="board-grid" id="boardGrid">
+            <!-- 64 Squares dynamically rendered -->
+          </div>
+
+          <!-- Rank Labels Right -->
+          <div class="rank-labels right-labels">
+            <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+          </div>
+        </div>
+
+        <!-- Coordinate Labels Bottom -->
+        <div class="file-labels bottom-labels">
+          <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Floating Bar -->
+      <div class="quick-actions">
+        <button class="action-btn undo-btn" id="btnUndo" title="Undo Move">
+          <span class="btn-icon">↩️</span>
+          <span class="btn-label">Undo</span>
+        </button>
+        <button class="action-btn restart-btn" id="btnRestart" title="New Game">
+          <span class="btn-icon">🔄</span>
+          <span class="btn-label">New Game</span>
+        </button>
+        <div class="message-banner" id="messageBanner">Red's Turn - Pick a piece!</div>
+      </div>
+    </main>
+
+    <!-- Bottom Right Floating Gear Button for iPad -->
+    <button class="gear-btn" id="btnOpenSettings" aria-label="Game Settings">
+      <svg class="gear-icon" viewBox="0 0 24 24" width="34" height="34" fill="currentColor">
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+      </svg>
+    </button>
+
+    <!-- Settings & Rules Drawer / Modal -->
+    <div class="settings-overlay" id="settingsOverlay">
+      <div class="settings-drawer" id="settingsDrawer">
+        <div class="drawer-header">
+          <h2>Game Options</h2>
+          <button class="close-drawer-btn" id="btnCloseSettings">&times;</button>
+        </div>
+
+        <div class="drawer-content">
+          <!-- Option: Row Count (2 Rows vs 3 Rows) -->
+          <div class="setting-group">
+            <label class="setting-label">Board Setup (Piece Rows)</label>
+            <div class="pill-toggle" id="rowToggleGroup">
+              <button class="pill-btn" data-rows="2">
+                <span class="pill-title">2 Rows (Quick)</span>
+                <span class="pill-subtitle">8 pieces each &bull; Faster kid game</span>
+              </button>
+              <button class="pill-btn active" data-rows="3">
+                <span class="pill-title">3 Rows (Classic)</span>
+                <span class="pill-subtitle">12 pieces each &bull; Standard</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Option: Game Mode (Standard vs Felix Variant) -->
+          <div class="setting-group">
+            <label class="setting-label">Game Mode</label>
+            <div class="pill-toggle" id="variantToggleGroup">
+              <button class="pill-btn active" data-variant="standard">
+                <span class="pill-title">Standard Checkers</span>
+                <span class="pill-subtitle">Classic diagonal moves &amp; jumps</span>
+              </button>
+              <button class="pill-btn" data-variant="felix">
+                <span class="pill-title">Felix Mode ✨</span>
+                <span class="pill-subtitle">Queens &amp; Bishops for both sides on the light squares!</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Option: Opponent (Pass & Play vs Kid-friendly AI) -->
+          <div class="setting-group">
+            <label class="setting-label">Opponent</label>
+            <div class="pill-toggle" id="opponentToggleGroup">
+              <button class="pill-btn active" data-opponent="pvp">
+                <span class="pill-title">2 Players (Pass &amp; Play)</span>
+                <span class="pill-subtitle">Play with a friend or parent on iPad</span>
+              </button>
+              <button class="pill-btn" data-opponent="ai">
+                <span class="pill-title">vs Computer 🤖</span>
+                <span class="pill-subtitle">Practice solo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sound Toggle -->
+          <div class="setting-group row-setting">
+            <label class="setting-label" for="soundToggle">Sound Effects</label>
+            <input type="checkbox" id="soundToggle" class="switch-input" checked>
+            <label for="soundToggle" class="switch-slider"></label>
+          </div>
+
+          <!-- Rules Summary -->
+          <div class="setting-group rules-summary">
+            <h3>How to Play</h3>
+            <ul class="rules-list">
+              <li><strong>Checkers:</strong> Move forward diagonally 1 square onto dark squares.</li>
+              <li><strong>Jump:</strong> Jump over an opponent's piece to capture it!</li>
+              <li><strong>Kings:</strong> Reaching the back row makes you a King 👑. Kings move backward and forward!</li>
+              <li class="felix-rule-item"><strong>Felix Mode:</strong> Both teams get a Queen and two light-squared Bishops on their back ranks! Checkers can attack them forward and sideways!</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button class="primary-btn" id="btnApplySettings">Start New Game With These Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Win / Game Over Modal -->
+    <div class="win-modal-overlay" id="winModalOverlay">
+      <div class="win-card">
+        <div class="win-trophy" id="winTrophy">🏆</div>
+        <h2 class="win-title" id="winTitle">Red Wins!</h2>
+        <p class="win-subtitle" id="winSubtitle">Spectacular game! Ready for another round?</p>
+        <div class="win-actions">
+          <button class="primary-btn" id="btnPlayAgain">Play Again</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
