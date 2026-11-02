@@ -206,8 +206,13 @@ class CheckersEngine {
       }
     }
 
+    // Captures are compulsory for checkers. Queens are exempt: they can always
+    // make any legal move, and their captures stay optional.
     const jumpMoves = rawMoves.filter(m => m.isJump);
-    const allMoves = jumpMoves.length > 0 ? jumpMoves : rawMoves;
+    const checkerJumps = rawMoves.filter(m => m.isJump && this.board[m.from.r][m.from.c].type === 'checker');
+    const allMoves = checkerJumps.length > 0
+      ? rawMoves.filter(m => m.isJump || this.board[m.from.r][m.from.c].type === 'queen')
+      : rawMoves;
     return { allMoves, jumpMoves };
   }
 
