@@ -3,6 +3,14 @@
  * Tailored for iPad and kid-friendly play.
  */
 
+const LEVEL_HELP = {
+  1: 'Gentle: makes lots of random moves. Great for beginners.',
+  2: 'Easy: grabs quick captures but misses tricks.',
+  3: 'Smart: thinks two moves ahead.',
+  4: 'Tricky: looks three moves ahead.',
+  5: 'Master: looks four moves ahead. Good luck!'
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const boardGrid = document.getElementById('boardGrid');
@@ -24,6 +32,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const rowToggleGroup = document.getElementById('rowToggleGroup');
   const variantToggleGroup = document.getElementById('variantToggleGroup');
   const opponentToggleGroup = document.getElementById('opponentToggleGroup');
+  const levelSettingGroup = document.getElementById('levelSettingGroup');
+  const levelToggleGroup = document.getElementById('levelToggleGroup');
+  const levelHelp = document.getElementById('levelHelp');
+
+  // Scoreboard Elements
+  const scoreAiEl = document.getElementById('scoreAi');
+  const scorePvpEl = document.getElementById('scorePvp');
+  const scoreChipsEl = document.getElementById('scoreChips');
+  const btnResetScores = document.getElementById('btnResetScores');
 
   // Win Modal
   const winModalOverlay = document.getElementById('winModalOverlay');
@@ -35,12 +52,26 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentConfig = {
     rowsOption: 3,
     variant: 'standard',
-    opponentType: 'pvp'
+    opponentType: 'pvp',
+    aiLevel: 3
   };
 
   let pendingConfig = { ...currentConfig };
   let engine = new CheckersEngine(currentConfig);
   let isAiThinking = false;
+  // Bumped whenever the board is replaced, so a computer move scheduled for an
+  // old game can never land on a new one.
+  let gameId = 0;
+  let stats = FelixStats.load();
+
+  function startFreshGame(config) {
+    if (config) engine = new CheckersEngine(config);
+    else engine.resetBoard();
+    gameId++;
+    isAiThinking = false;
+    winModalOverlay.classList.remove('open');
+    renderBoard();
+  }
 
   // Render the initial 8x8 Board DOM
   function createBoardDOM() {
@@ -51,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sq.className = 'square ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
         sq.dataset.row = r;
         sq.dataset.col = c;
-        
+
         sq.addEventListener('click', (e) => handleSquareClick(r, c, e));
         boardGrid.appendChild(sq);
       }
@@ -126,10 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Mode Tag
-    const rowText = currentConfig.rowsOption === 2 ? 'Quick (2 Rows)' : 'Classic (3 Rows)';
-    const variantText = currentConfig.variant === 'felix' ? 'Felix Mode ✨' : 'Standard';
-    modeTag.textContent = `${variantText} &bull; ${rowText}`;
-    modeTag.innerHTML = `${variantText} &bull; ${rowText}`;
+    const rowText = currentConfig.rowsOption === 2 ? '2 Rows' : '3 Rows';
+    const variantText = currentConfig.variant === 'felix' ? 'Felix ✨' : 'Standard';
+    const playersText = currentConfig.opponentType === 'ai'
+      ? `1 Player · Lv ${currentConfig.aiLevel}`
+      : '2 Players';
+    modeTag.textContent = `${variantText} • ${rowText} • ${playersText}`;
 
     // Message Banner
     if (engine.isMultiJumping) {
@@ -137,8 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (isAiThinking) {
       messageBanner.textContent = "Computer is thinking... 🤖";
     } else {
-      const turnName = engine.turn === PLAYER_RED ? "Red" : (currentConfig.opponentType === 'ai' ? "Computer" : "Black");
-      messageBanner.textContent = `${turnName}'s Turn - Choose a piece to move!`;
+      const turnName = engine.turn === PLAYER_RED
+        ? (currentConfig.opponentType === 'ai' ? 'Your' : 'Red')
+        : (currentConfig.opponentType === 'ai' ? "Computer's" : 'Black');
+      messageBanner.textContent = `${turnName} Turn - Choose a piece to move!`;
     }
   }
 
@@ -147,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isAiThinking) return;
     if (engine.winner) return;
 
-    // In AI mode, ignore clicks when it's black's turn
+    // In 1 Player mode, ignore clicks when it's the computer's turn
     if (currentConfig.opponentType === 'ai' && engine.turn === PLAYER_BLACK) {
       return;
     }
@@ -169,14 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Selecting a piece belonging to the active player
     if (clickedPiece && clickedPiece.player === engine.turn) {
       const moves = engine.getValidMoves(r, c);
+      engine.selectedSquare = { r, c };
+      engine.validMovesForSelected = moves;
       if (moves.length > 0) {
-        engine.selectedSquare = { r, c };
-        engine.validMovesForSelected = moves;
         window.soundEffects.playMove();
-      } else {
-        // Piece has no valid moves
-        engine.selectedSquare = { r, c };
-        engine.validMovesForSelected = [];
       }
       renderBoard();
       return;
@@ -190,12 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Execute Move
-  function executeMove(move) {
-    const result = engine.makeMove(move);
-    if (!result.success) return;
-
-    // Sound effect
+  function playMoveSound(result) {
     if (result.becameKing) {
       window.soundEffects.playKing();
     } else if (result.wasCaptured) {
@@ -203,7 +229,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       window.soundEffects.playMove();
     }
+  }
 
+  // Execute Move
+  function executeMove(move) {
+    const result = engine.makeMove(move);
+    if (!result.success) return;
+
+    playMoveSound(result);
     renderBoard();
 
     // Check Win Condition
@@ -217,77 +250,121 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // If opponent is AI and it's Black's turn, trigger AI move after a short friendly delay
+    // If opponent is the computer and it's Black's turn, trigger its move after a short friendly delay
     if (currentConfig.opponentType === 'ai' && engine.turn === PLAYER_BLACK) {
       triggerAiMove();
     }
   }
 
-  // AI Turn handling with kid-friendly pacing
+  // Computer turn handling with kid-friendly pacing
   function triggerAiMove() {
+    const myGame = gameId;
     isAiThinking = true;
     updateStatusUI();
 
     setTimeout(() => {
+      if (myGame !== gameId) return; // board was replaced while thinking
       if (engine.winner) {
         isAiThinking = false;
         return;
       }
 
-      const aiMove = engine.getBestAIMove();
-      if (aiMove) {
-        // Select piece briefly to show intent
-        engine.selectedSquare = aiMove.from;
-        engine.validMovesForSelected = [aiMove];
+      const aiMove = engine.getBestAIMove(currentConfig.aiLevel);
+      if (!aiMove) {
+        isAiThinking = false;
+        return;
+      }
+
+      // Select piece briefly to show intent
+      engine.selectedSquare = aiMove.from;
+      engine.validMovesForSelected = [aiMove];
+      renderBoard();
+
+      setTimeout(() => {
+        if (myGame !== gameId) return;
+        const res = engine.makeMove(aiMove);
+        playMoveSound(res);
         renderBoard();
 
-        setTimeout(() => {
-          const res = engine.makeMove(aiMove);
-          if (res.becameKing) {
-            window.soundEffects.playKing();
-          } else if (res.wasCaptured) {
-            window.soundEffects.playCapture();
-          } else {
-            window.soundEffects.playMove();
-          }
+        if (res.gameOver && res.gameOver.isOver) {
+          isAiThinking = false;
+          triggerGameOver(res.gameOver);
+          return;
+        }
 
+        // Computer multi-jumps continue with the same pacing
+        if (res.multiJumpAvailable) {
+          setTimeout(() => {
+            if (myGame !== gameId) return;
+            triggerAiMove();
+          }, 600);
+        } else {
+          isAiThinking = false;
           renderBoard();
-
-          if (res.gameOver && res.gameOver.isOver) {
-            triggerGameOver(res.gameOver);
-            isAiThinking = false;
-            return;
-          }
-
-          // Handle AI multi-jumps if any
-          if (res.multiJumpAvailable) {
-            setTimeout(() => {
-              triggerAiMove();
-            }, 600);
-          } else {
-            isAiThinking = false;
-            renderBoard();
-          }
-        }, 350);
-      } else {
-        isAiThinking = false;
-      }
+        }
+      }, 350);
     }, 600);
+  }
+
+  // Name shown for a side: in 1 Player mode Red is "You" and Black is "Computer"
+  function sideName(player) {
+    if (currentConfig.opponentType === 'ai') {
+      return player === PLAYER_RED ? 'You' : 'Computer';
+    }
+    return player === PLAYER_RED ? 'Red' : 'Black';
   }
 
   // Game Over Handling
   function triggerGameOver(info) {
     window.soundEffects.playWin();
-    const winnerName = info.winner === PLAYER_RED ? 'Red' : 'Black';
-    winTitle.textContent = `${winnerName} Wins! 🏆`;
-    winSubtitle.textContent = info.reason;
+
+    // Record the result (once per finished game) in the cookie
+    if (currentConfig.opponentType === 'ai') {
+      stats = FelixStats.recordGame(stats, { mode: 'ai', winner: info.winner, level: currentConfig.aiLevel });
+    } else {
+      stats = FelixStats.recordGame(stats, { mode: 'pvp', winner: info.winner });
+    }
+    FelixStats.save(stats);
+    renderScoreboard();
+
+    const winnerName = sideName(info.winner);
+    if (winnerName === 'You') {
+      winTitle.textContent = 'You Win! 🏆';
+    } else {
+      winTitle.textContent = `${winnerName} Wins! 🏆`;
+    }
+
+    const scoreText = currentConfig.opponentType === 'ai'
+      ? `Score: You ${stats.ai.wins[currentConfig.aiLevel]} – ${stats.ai.losses[currentConfig.aiLevel]} Computer at Level ${currentConfig.aiLevel}`
+      : `Score: Red ${stats.pvp.red} – ${stats.pvp.black} Black`;
+    winSubtitle.textContent = `${info.reason} ${scoreText}`;
     winModalOverlay.classList.add('open');
+  }
+
+  // Scoreboard (numbers only, read from the cookie-backed stats)
+  function renderScoreboard() {
+    const totals = FelixStats.totals(stats);
+    scoreAiEl.textContent = `${totals.playerWins} – ${totals.computerWins}`;
+    scorePvpEl.textContent = `${stats.pvp.red} – ${stats.pvp.black}`;
+
+    scoreChipsEl.innerHTML = '';
+    FelixStats.LEVELS.forEach(level => {
+      const chip = document.createElement('div');
+      chip.className = 'score-chip';
+      const label = document.createElement('span');
+      label.textContent = `Lv ${level}`;
+      const record = document.createElement('b');
+      record.textContent = `${stats.ai.wins[level]} – ${stats.ai.losses[level]}`;
+      chip.append(label, record);
+      scoreChipsEl.appendChild(chip);
+    });
   }
 
   // Settings Drawer Toggle
   function openSettings() {
     pendingConfig = { ...currentConfig };
     syncSettingsPills();
+    renderScoreboard();
     settingsOverlay.classList.add('open');
   }
 
@@ -306,10 +383,18 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.toggle('active', btn.dataset.variant === pendingConfig.variant);
     });
 
-    // Opponent
+    // Players (1 Player = vs computer, 2 Players = pass & play)
     opponentToggleGroup.querySelectorAll('.pill-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.opponent === pendingConfig.opponentType);
     });
+
+    // Computer level: only relevant for 1 Player
+    const vsComputer = pendingConfig.opponentType === 'ai';
+    levelSettingGroup.hidden = !vsComputer;
+    levelToggleGroup.querySelectorAll('.level-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.level, 10) === pendingConfig.aiLevel);
+    });
+    levelHelp.textContent = LEVEL_HELP[pendingConfig.aiLevel];
   }
 
   // Settings Pill Clicks
@@ -334,16 +419,28 @@ document.addEventListener('DOMContentLoaded', () => {
     syncSettingsPills();
   });
 
+  levelToggleGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('.level-btn');
+    if (!btn) return;
+    pendingConfig.aiLevel = parseInt(btn.dataset.level, 10);
+    syncSettingsPills();
+  });
+
   soundToggle.addEventListener('change', () => {
     window.soundEffects.enabled = soundToggle.checked;
   });
 
   btnApplySettings.addEventListener('click', () => {
     currentConfig = { ...pendingConfig };
-    engine = new CheckersEngine(currentConfig);
     closeSettings();
-    winModalOverlay.classList.remove('open');
-    renderBoard();
+    startFreshGame(currentConfig);
+  });
+
+  btnResetScores.addEventListener('click', () => {
+    if (!confirm('Reset all scores on this device?')) return;
+    stats = FelixStats.reset();
+    FelixStats.save(stats);
+    renderScoreboard();
   });
 
   // Undo button
@@ -359,17 +456,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restart / New Game button
   btnRestart.addEventListener('click', () => {
     if (confirm("Start a fresh new game?")) {
-      engine.resetBoard();
-      winModalOverlay.classList.remove('open');
-      renderBoard();
+      startFreshGame();
     }
   });
 
   // Win modal play again
   btnPlayAgain.addEventListener('click', () => {
-    winModalOverlay.classList.remove('open');
-    engine.resetBoard();
-    renderBoard();
+    startFreshGame();
   });
 
   btnOpenSettings.addEventListener('click', openSettings);
@@ -380,5 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize
   createBoardDOM();
+  renderScoreboard();
   renderBoard();
 });
