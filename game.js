@@ -7,6 +7,27 @@
 const PLAYER_RED = 'red';
 const PLAYER_BLACK = 'black';
 
+// Material values used by the computer opponent
+const PIECE_VALUES = { checker: 100, king: 170, bishop: 130, queen: 260 };
+const WIN_SCORE = 100000;
+
+// Computer levels (1-5).
+//  depth:        plies the computer looks ahead
+//  randomChance: chance it ignores its thinking and plays a random legal move
+//  noise:        random +/- wobble added to each move's score (less precise play)
+const AI_LEVELS = {
+  1: { name: 'Gentle', depth: 1, randomChance: 0.6, noise: 0 },
+  2: { name: 'Easy', depth: 1, randomChance: 0, noise: 20 },
+  3: { name: 'Smart', depth: 2, randomChance: 0, noise: 0 },
+  4: { name: 'Tricky', depth: 3, randomChance: 0, noise: 0 },
+  5: { name: 'Master', depth: 4, randomChance: 0, noise: 0 }
+};
+
+function pieceValue(piece) {
+  if (piece.type === 'checker') return piece.isKing ? PIECE_VALUES.king : PIECE_VALUES.checker;
+  return PIECE_VALUES[piece.type] || 0;
+}
+
 class CheckersEngine {
   constructor(config = {}) {
     this.rowsOption = config.rowsOption || 3; // 2 or 3 rows
@@ -173,29 +194,36 @@ class CheckersEngine {
     return { red, black };
   }
 
+  // Mandatory capture: if any piece of `player` can jump, only jumps are legal.
   getAllValidMovesForPlayer(player) {
-    const allMoves = [];
-    const jumpMoves = [];
-
+    const rawMoves = [];
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const piece = this.board[r][c];
         if (piece && piece.player === player) {
-          const moves = this.getValidMoves(r, c);
-          for (const m of moves) {
-            allMoves.push(m);
-            if (m.isJump) {
-              jumpMoves.push(m);
-            }
-          }
+          rawMoves.push(...this.getRawMoves(r, c));
         }
       }
     }
 
+    const jumpMoves = rawMoves.filter(m => m.isJump);
+    const allMoves = jumpMoves.length > 0 ? jumpMoves : rawMoves;
     return { allMoves, jumpMoves };
   }
 
   getValidMoves(r, c) {
+    const piece = this.board[r][c];
+    if (!piece) return [];
+
+    // Locked in a multi-jump: only that piece, only jumps (handled in getRawMoves)
+    if (this.isMultiJumping) return this.getRawMoves(r, c);
+
+    const { allMoves } = this.getAllValidMovesForPlayer(piece.player);
+    return allMoves.filter(m => m.from.r === r && m.from.c === c);
+  }
+
+  // Every geometric move for the piece on (r, c), before the mandatory-capture rule
+  getRawMoves(r, c) {
     const piece = this.board[r][c];
     if (!piece) return [];
 
@@ -209,8 +237,6 @@ class CheckersEngine {
 
     const jumps = this.getJumpMoves(r, c, piece);
     const steps = this.getStepMoves(r, c, piece);
-
-    // Return jumps + normal steps
     return [...jumps, ...steps];
   }
 
@@ -481,58 +507,139 @@ class CheckersEngine {
     return { isOver: false, winner: null };
   }
 
-  // Kid-Friendly Solitaire AI
-  getBestAIMove() {
-    const { allMoves, jumpMoves } = this.getAllValidMovesForPlayer(PLAYER_BLACK);
-    if (allMoves.length === 0) return null;
+  // ---------------------------------------------------------------------------
+  // Computer opponent: alpha-beta search over clones of the engine, so the live
+  // game is never mutated. Strength is set by the level (see AI_LEVELS).
+  // ---------------------------------------------------------------------------
 
-    // 1. If there are captures/jumps available, prioritize them by target value
-    if (jumpMoves.length > 0) {
-      jumpMoves.sort((a, b) => {
-        let scoreA = 10;
-        let scoreB = 10;
-        
-        // Evaluate target captured piece
-        if (a.captured) {
-          const targetA = this.board[a.captured.r][a.captured.c];
-          if (targetA?.type === 'queen') scoreA += 20;
-          else if (targetA?.type === 'bishop') scoreA += 12;
-          else if (targetA?.isKing) scoreA += 8;
-        }
-        if (b.captured) {
-          const targetB = this.board[b.captured.r][b.captured.c];
-          if (targetB?.type === 'queen') scoreB += 20;
-          else if (targetB?.type === 'bishop') scoreB += 12;
-          else if (targetB?.isKing) scoreB += 8;
-        }
+  // Score from Black's (the computer's) point of view. Positive favours Black.
+  evaluate() {
+    let score = 0;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = this.board[r][c];
+        if (!p) continue;
 
-        if (a.to.r === 7) scoreA += 5; // Promotion
-        if (b.to.r === 7) scoreB += 5;
-        return scoreB - scoreA;
-      });
-      return jumpMoves[0];
+        let value = pieceValue(p);
+        if (p.type === 'checker' && !p.isKing) {
+          // Reward checkers for advancing toward promotion (Black heads down, Red heads up)
+          const progress = p.player === PLAYER_BLACK ? r : 7 - r;
+          value += progress * 4;
+        }
+        // Mild preference for central files
+        value += (3.5 - Math.abs(c - 3.5)) * 1.5;
+
+        score += p.player === PLAYER_BLACK ? value : -value;
+      }
+    }
+    return score;
+  }
+
+  cloneForSearch() {
+    const copy = Object.create(CheckersEngine.prototype);
+    copy.rowsOption = this.rowsOption;
+    copy.variant = this.variant;
+    copy.opponentType = this.opponentType;
+    copy.board = this.board.map(row => row.map(cell => (cell ? { ...cell } : null)));
+    copy.turn = this.turn;
+    copy.selectedSquare = null;
+    copy.validMovesForSelected = [];
+    copy.isMultiJumping = this.isMultiJumping;
+    copy.multiJumpingPiece = this.multiJumpingPiece ? { ...this.multiJumpingPiece } : null;
+    copy.history = [];
+    copy.winner = this.winner;
+    copy.moveCount = this.moveCount;
+    copy.saveHistory = () => {}; // search doesn't need undo history
+    return copy;
+  }
+
+  // Captures first (most valuable target first), then promotions
+  orderMoves(moves) {
+    const scoreOf = (m) => {
+      let s = 0;
+      if (m.isJump && m.captured) {
+        const target = this.board[m.captured.r][m.captured.c];
+        s += 1000 + (target ? pieceValue(target) : 0);
+      }
+      const piece = this.board[m.from.r][m.from.c];
+      if (piece && piece.type === 'checker' && !piece.isKing && (m.to.r === 0 || m.to.r === 7)) {
+        s += 500;
+      }
+      return s;
+    };
+    return moves
+      .map(m => ({ m, s: scoreOf(m) }))
+      .sort((a, b) => b.s - a.s)
+      .map(x => x.m);
+  }
+
+  // Minimax with alpha-beta pruning. `depth` counts plies; a multi-jump keeps the
+  // same player on move, so it does not use up a ply.
+  search(depth, alpha, beta) {
+    if (this.winner) {
+      // Faster wins (more depth left) score higher
+      return this.winner === PLAYER_BLACK ? WIN_SCORE + depth : -WIN_SCORE - depth;
+    }
+    if (depth <= 0) return this.evaluate();
+
+    const { allMoves } = this.getAllValidMovesForPlayer(this.turn);
+    if (allMoves.length === 0) {
+      return this.turn === PLAYER_BLACK ? -WIN_SCORE : WIN_SCORE;
     }
 
-    // 2. Regular moves: prioritize moving towards promotion and center
-    allMoves.sort((a, b) => {
-      let scoreA = a.to.r; // moving down board
-      let scoreB = b.to.r;
-      const pieceA = this.board[a.from.r][a.from.c];
-      const pieceB = this.board[b.from.r][b.from.c];
+    const maximizing = this.turn === PLAYER_BLACK;
+    let best = maximizing ? -Infinity : Infinity;
 
-      // Slight activity bonus for chess pieces in Felix mode
-      if (pieceA?.type === 'queen' || pieceA?.type === 'bishop') scoreA += 1;
-      if (pieceB?.type === 'queen' || pieceB?.type === 'bishop') scoreB += 1;
+    for (const move of this.orderMoves(allMoves)) {
+      const child = this.cloneForSearch();
+      const res = child.makeMove(move);
+      const nextDepth = res.multiJumpAvailable ? depth : depth - 1;
+      const score = child.search(nextDepth, alpha, beta);
 
-      // Bonus for staying out of edges
-      if (a.to.c > 0 && a.to.c < 7) scoreA += 1;
-      if (b.to.c > 0 && b.to.c < 7) scoreB += 1;
-      return scoreB - scoreA + (Math.random() * 0.5 - 0.25);
-    });
+      if (maximizing) {
+        best = Math.max(best, score);
+        alpha = Math.max(alpha, best);
+      } else {
+        best = Math.min(best, score);
+        beta = Math.min(beta, best);
+      }
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
 
-    return allMoves[0];
+  getBestAIMove(level = 3) {
+    const cfg = AI_LEVELS[level] || AI_LEVELS[3];
+    const { allMoves } = this.getAllValidMovesForPlayer(PLAYER_BLACK);
+    if (allMoves.length === 0) return null;
+
+    if (Math.random() < cfg.randomChance) {
+      return allMoves[Math.floor(Math.random() * allMoves.length)];
+    }
+
+    let bestMove = null;
+    let bestScore = -Infinity;
+    let alpha = -Infinity;
+
+    for (const move of this.orderMoves(allMoves)) {
+      const child = this.cloneForSearch();
+      const res = child.makeMove(move);
+      const nextDepth = res.multiJumpAvailable ? cfg.depth : cfg.depth - 1;
+
+      let score = child.search(nextDepth, alpha, Infinity);
+      if (cfg.noise) score += (Math.random() * 2 - 1) * cfg.noise;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+      alpha = Math.max(alpha, bestScore);
+    }
+    return bestMove;
   }
 }
+
+CheckersEngine.LEVELS = AI_LEVELS;
 
 if (typeof window !== 'undefined') {
   window.CheckersEngine = CheckersEngine;

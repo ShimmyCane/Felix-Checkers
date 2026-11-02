@@ -126,19 +126,32 @@
             </div>
           </div>
 
-          <!-- Option: Opponent (Pass & Play vs Kid-friendly AI) -->
+          <!-- Option: 1 Player (vs Computer) or 2 Players (Pass & Play) -->
           <div class="setting-group">
-            <label class="setting-label">Opponent</label>
+            <label class="setting-label">Players</label>
             <div class="pill-toggle" id="opponentToggleGroup">
               <button class="pill-btn active" data-opponent="pvp">
-                <span class="pill-title">2 Players (Pass &amp; Play)</span>
-                <span class="pill-subtitle">Play with a friend or parent on iPad</span>
+                <span class="pill-title">2 Players</span>
+                <span class="pill-subtitle">Pass &amp; play with a friend or parent on one iPad</span>
               </button>
               <button class="pill-btn" data-opponent="ai">
-                <span class="pill-title">vs Computer 🤖</span>
-                <span class="pill-subtitle">Practice solo</span>
+                <span class="pill-title">1 Player 🤖</span>
+                <span class="pill-subtitle">You play Red against the computer</span>
               </button>
             </div>
+          </div>
+
+          <!-- Option: Computer level (only shown for 1 Player) -->
+          <div class="setting-group" id="levelSettingGroup" hidden>
+            <label class="setting-label">Computer Level</label>
+            <div class="level-toggle" id="levelToggleGroup">
+              <button class="level-btn" data-level="1"><span class="level-num">1</span><span class="level-name">Gentle</span></button>
+              <button class="level-btn" data-level="2"><span class="level-num">2</span><span class="level-name">Easy</span></button>
+              <button class="level-btn active" data-level="3"><span class="level-num">3</span><span class="level-name">Smart</span></button>
+              <button class="level-btn" data-level="4"><span class="level-num">4</span><span class="level-name">Tricky</span></button>
+              <button class="level-btn" data-level="5"><span class="level-num">5</span><span class="level-name">Master</span></button>
+            </div>
+            <span class="level-help" id="levelHelp">Smart: thinks two moves ahead.</span>
           </div>
 
           <!-- Sound Toggle -->
@@ -148,12 +161,21 @@
             <label for="soundToggle" class="switch-slider"></label>
           </div>
 
+          <!-- Scoreboard (saved in a cookie on this device) -->
+          <div class="setting-group scoreboard">
+            <h3>Scoreboard</h3>
+            <div class="score-line"><span>1 Player (you vs computer)</span><span id="scoreAi">0 – 0</span></div>
+            <div class="score-chips" id="scoreChips"></div>
+            <div class="score-line"><span>2 Players (Red vs Black)</span><span id="scorePvp">0 – 0</span></div>
+            <button class="ghost-btn" id="btnResetScores">Reset scores</button>
+          </div>
+
           <!-- Rules Summary -->
           <div class="setting-group rules-summary">
             <h3>How to Play</h3>
             <ul class="rules-list">
               <li><strong>Checkers:</strong> Move forward diagonally 1 square onto dark squares.</li>
-              <li><strong>Jump:</strong> Jump over an opponent's piece to capture it!</li>
+              <li><strong>Jump:</strong> Jump over an opponent's piece to capture it! If you can jump, you must.</li>
               <li><strong>Kings:</strong> Reaching the back row makes you a King 👑. Kings move backward and forward!</li>
               <li class="felix-rule-item"><strong>Felix Mode:</strong> Both teams get a Queen and two light-squared Bishops on their back ranks! Checkers can attack them forward and sideways!</li>
             </ul>
@@ -181,6 +203,7 @@
   </div>
 
   <script src="audio.js"></script>
+  <script src="stats.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
 </body>

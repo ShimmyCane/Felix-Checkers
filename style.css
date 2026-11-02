@@ -814,6 +814,128 @@ body {
   margin-bottom: 24px;
 }
 
+/* ==========================================================================
+   Computer Level Picker (1-5)
+   ========================================================================== */
+[hidden] {
+  display: none !important;
+}
+
+.level-toggle {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.level-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 2px;
+  border-radius: 14px;
+  border: 2.5px solid #CBD5E0;
+  background: #FFF;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.level-btn .level-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #2D3748;
+}
+
+.level-btn .level-name {
+  font-size: 0.72rem;
+  color: #718096;
+}
+
+.level-btn.active {
+  border-color: #2D3748;
+  background: #EBFBEE;
+  box-shadow: 0 3px 0 #2D3748;
+}
+
+.level-btn.active .level-num {
+  color: #2B8A3E;
+}
+
+.level-help {
+  font-size: 0.9rem;
+  color: #4A5568;
+}
+
+/* ==========================================================================
+   Scoreboard (cookie-backed wins)
+   ========================================================================== */
+.scoreboard {
+  background: #F8F9FA;
+  padding: 16px;
+  border-radius: 16px;
+  border: 2px dashed #CBD5E0;
+}
+
+.scoreboard h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.score-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2D3748;
+  padding: 4px 0;
+}
+
+.score-line span:last-child {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2B8A3E;
+}
+
+.score-chips {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.score-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #FFF;
+  border: 2px solid #CBD5E0;
+  border-radius: 10px;
+  padding: 4px 0;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.score-chip b {
+  font-size: 0.9rem;
+  color: #2D3748;
+}
+
+.ghost-btn {
+  width: 100%;
+  height: 44px;
+  margin-top: 10px;
+  border-radius: 14px;
+  border: 2.5px solid #2D3748;
+  background: #FFF;
+  color: #2D3748;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Media query adaptations for iPad landscape/portrait */
 @media (min-width: 768px) {
   :root {
