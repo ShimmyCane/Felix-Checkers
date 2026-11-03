@@ -42,12 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreChipsEl = document.getElementById('scoreChips');
   const btnResetScores = document.getElementById('btnResetScores');
 
-  // Maintenance: win-chance bar (hidden unless switched on)
-  const boardRow = document.getElementById('boardRow');
-  const evalBar = document.getElementById('evalBar');
-  const evalBlack = document.getElementById('evalBlack');
-  const evalRed = document.getElementById('evalRed');
-  const evalLabel = document.getElementById('evalLabel');
+  // Maintenance: win-chance bar, drawn as the board's bold frame (off by default)
+  const boardFrame = document.querySelector('.board-frame');
   const evalToggle = document.getElementById('evalToggle');
 
   // Win Modal
@@ -82,24 +78,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   evalToggle.checked = showEvalBar;
 
-  // Shows Black's (computer's) and Red's estimated chance of winning
+  // Win-chance bar: the board frame shows Black's chance (top) and Red's (bottom)
   function updateEvalBar() {
     if (!showEvalBar) {
-      evalBar.hidden = true;
-      boardRow.classList.remove('with-eval');
+      boardFrame.classList.remove('win-bar');
+      boardFrame.style.removeProperty('--win-black');
+      boardFrame.removeAttribute('title');
       return;
     }
-    boardRow.classList.add('with-eval');
-    evalBar.hidden = false;
-
-    const blackChance = engine.winChance(3);
-    const blackPct = Math.round(blackChance * 100);
-    evalBlack.style.height = `${blackPct}%`;
-    evalRed.style.height = `${100 - blackPct}%`;
-
-    const leaderPct = Math.max(blackPct, 100 - blackPct);
-    evalLabel.textContent = `${leaderPct}%`;
-    evalBar.title = `Chance to win: Red ${100 - blackPct}% · Black ${blackPct}%`;
+    const blackPct = Math.round(engine.winChance(3) * 100);
+    boardFrame.classList.add('win-bar');
+    boardFrame.style.setProperty('--win-black', `${blackPct}%`);
+    boardFrame.title = `Chance to win: Red ${100 - blackPct}% · Black ${blackPct}%`;
   }
 
   evalToggle.addEventListener('change', () => {
