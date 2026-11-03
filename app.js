@@ -42,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreChipsEl = document.getElementById('scoreChips');
   const btnResetScores = document.getElementById('btnResetScores');
 
+  // Maintenance: win-chance bar, drawn as the board's bold frame (off by default)
+  const boardFrame = document.querySelector('.board-frame');
+  const evalToggle = document.getElementById('evalToggle');
+
   // Win Modal
   const winModalOverlay = document.getElementById('winModalOverlay');
   const winTitle = document.getElementById('winTitle');
@@ -63,6 +67,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // old game can never land on a new one.
   let gameId = 0;
   let stats = FelixStats.load();
+
+  // Win-chance bar preference: off by default, remembered on this device
+  const EVAL_KEY = 'felixShowEvalBar';
+  let showEvalBar = false;
+  try {
+    showEvalBar = localStorage.getItem(EVAL_KEY) === '1';
+  } catch (e) {
+    showEvalBar = false; // storage blocked: fall back to hidden
+  }
+  evalToggle.checked = showEvalBar;
+
+  // Win-chance bar: the board frame shows Black's chance (top) and Red's (bottom)
+  function updateEvalBar() {
+    if (!showEvalBar) {
+      boardFrame.classList.remove('win-bar');
+      boardFrame.style.removeProperty('--win-black');
+      boardFrame.removeAttribute('title');
+      return;
+    }
+    const blackPct = Math.round(engine.winChance(3) * 100);
+    boardFrame.classList.add('win-bar');
+    boardFrame.style.setProperty('--win-black', `${blackPct}%`);
+    boardFrame.title = `Chance to win: Red ${100 - blackPct}% · Black ${blackPct}%`;
+  }
+
+  evalToggle.addEventListener('change', () => {
+    showEvalBar = evalToggle.checked;
+    try {
+      localStorage.setItem(EVAL_KEY, showEvalBar ? '1' : '0');
+    } catch (e) {
+      // ignore: preference just won't persist
+    }
+    updateEvalBar();
+  });
 
   function startFreshGame(config) {
     if (config) engine = new CheckersEngine(config);
@@ -163,6 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ? `1 Player · Lv ${currentConfig.aiLevel}`
       : '2 Players';
     modeTag.textContent = `${variantText} • ${rowText} • ${playersText}`;
+
+    updateEvalBar();
 
     // Message Banner
     if (engine.isMultiJumping) {

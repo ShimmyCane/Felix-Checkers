@@ -193,11 +193,18 @@ body {
   width: 100%;
 }
 
+/* The bold frame doubles as the win-chance bar (maintenance setting):
+   top = Black's chance, bottom = Red's. Off, both halves are the normal dark frame. */
 .board-frame {
-  background: #E2E8F0;
+  --bar-black: #2D3748;
+  --bar-red: #2D3748;
+  --win-black: 50%;
+  background:
+    linear-gradient(#E2E8F0, #E2E8F0) padding-box,
+    linear-gradient(to bottom, var(--bar-black) 0 var(--win-black), var(--bar-red) var(--win-black) 100%) border-box;
   padding: 10px;
   border-radius: 20px;
-  border: 4px solid #2D3748;
+  border: 4px solid transparent;
   box-shadow: 0 8px 0 #2D3748;
   display: flex;
   flex-direction: column;
@@ -934,6 +941,12 @@ body {
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* Win-chance mode: Black's half uses the piece colours, Red's half the Red piece */
+.board-frame.win-bar {
+  --bar-black: #343A40;
+  --bar-red: #FF6B6B;
 }
 
 /* Media query adaptations for iPad landscape/portrait */

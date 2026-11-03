@@ -617,6 +617,14 @@ class CheckersEngine {
     return best;
   }
 
+  // Black's (the computer's) estimated chance to win, 0..1, from a shallow search.
+  // Used for the maintenance win-chance bar; the score-to-probability curve is a
+  // logistic on material-scale units (about 300 points = roughly 75%).
+  winChance(depth = 3) {
+    const score = this.cloneForSearch().search(depth, -Infinity, Infinity);
+    return 1 / (1 + Math.pow(10, -score / 300));
+  }
+
   getBestAIMove(level = 3) {
     const cfg = AI_LEVELS[level] || AI_LEVELS[3];
     const { allMoves } = this.getAllValidMovesForPlayer(PLAYER_BLACK);
