@@ -206,12 +206,16 @@ class CheckersEngine {
       }
     }
 
-    // Captures are compulsory for checkers. Queens are exempt: they can always
-    // make any legal move, and their captures stay optional.
+    // Captures are compulsory for checkers. Queens and bishops are exempt: they can
+    // always make any legal move, and their captures stay optional.
+    const isChessPiece = (m) => {
+      const type = this.board[m.from.r][m.from.c].type;
+      return type === 'queen' || type === 'bishop';
+    };
     const jumpMoves = rawMoves.filter(m => m.isJump);
     const checkerJumps = rawMoves.filter(m => m.isJump && this.board[m.from.r][m.from.c].type === 'checker');
     const allMoves = checkerJumps.length > 0
-      ? rawMoves.filter(m => m.isJump || this.board[m.from.r][m.from.c].type === 'queen')
+      ? rawMoves.filter(m => m.isJump || isChessPiece(m))
       : rawMoves;
     return { allMoves, jumpMoves };
   }
