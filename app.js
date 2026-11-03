@@ -400,6 +400,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Version log at the end of Game Options
+  function renderVersionLog() {
+    document.getElementById('versionCurrent').textContent =
+      `Running version ${FELIX_VERSION.current}`;
+    const list = document.getElementById('versionEntries');
+    list.innerHTML = '';
+    FELIX_VERSION.log.forEach(entry => {
+      const li = document.createElement('li');
+      const head = document.createElement('strong');
+      head.textContent = `${entry.version} (${entry.date})`;
+      li.appendChild(head);
+      const ul = document.createElement('ul');
+      entry.changes.forEach(text => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        ul.appendChild(item);
+      });
+      li.appendChild(ul);
+      list.appendChild(li);
+    });
+  }
+
   // Settings Drawer Toggle
   function openSettings() {
     pendingConfig = { ...currentConfig };
@@ -513,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize
   createBoardDOM();
+  renderVersionLog();
   renderScoreboard();
   renderBoard();
 });
