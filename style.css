@@ -958,3 +958,34 @@ body {
     font-size: 2.2rem;
   }
 }
+
+/* ==========================================================================
+   Version log (end of Game Options)
+   ========================================================================== */
+.version-log {
+  font-size: 0.85rem;
+  color: #4A5568;
+}
+
+.version-log h3 {
+  font-size: 1.05rem;
+  color: #2D3748;
+}
+
+.version-current {
+  font-weight: 700;
+  color: #2D3748;
+}
+
+.version-entries {
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.version-entries > li {
+  margin-bottom: 8px;
+}
+
+.version-entries ul {
+  padding-left: 16px;
+}
