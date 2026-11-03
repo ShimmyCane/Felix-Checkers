@@ -42,6 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreChipsEl = document.getElementById('scoreChips');
   const btnResetScores = document.getElementById('btnResetScores');
 
+  // Maintenance: win-chance bar (hidden unless switched on)
+  const boardRow = document.getElementById('boardRow');
+  const evalBar = document.getElementById('evalBar');
+  const evalBlack = document.getElementById('evalBlack');
+  const evalRed = document.getElementById('evalRed');
+  const evalLabel = document.getElementById('evalLabel');
+  const evalToggle = document.getElementById('evalToggle');
+
   // Win Modal
   const winModalOverlay = document.getElementById('winModalOverlay');
   const winTitle = document.getElementById('winTitle');
@@ -63,6 +71,46 @@ document.addEventListener('DOMContentLoaded', () => {
   // old game can never land on a new one.
   let gameId = 0;
   let stats = FelixStats.load();
+
+  // Win-chance bar preference: off by default, remembered on this device
+  const EVAL_KEY = 'felixShowEvalBar';
+  let showEvalBar = false;
+  try {
+    showEvalBar = localStorage.getItem(EVAL_KEY) === '1';
+  } catch (e) {
+    showEvalBar = false; // storage blocked: fall back to hidden
+  }
+  evalToggle.checked = showEvalBar;
+
+  // Shows Black's (computer's) and Red's estimated chance of winning
+  function updateEvalBar() {
+    if (!showEvalBar) {
+      evalBar.hidden = true;
+      boardRow.classList.remove('with-eval');
+      return;
+    }
+    boardRow.classList.add('with-eval');
+    evalBar.hidden = false;
+
+    const blackChance = engine.winChance(3);
+    const blackPct = Math.round(blackChance * 100);
+    evalBlack.style.height = `${blackPct}%`;
+    evalRed.style.height = `${100 - blackPct}%`;
+
+    const leaderPct = Math.max(blackPct, 100 - blackPct);
+    evalLabel.textContent = `${leaderPct}%`;
+    evalBar.title = `Chance to win: Red ${100 - blackPct}% · Black ${blackPct}%`;
+  }
+
+  evalToggle.addEventListener('change', () => {
+    showEvalBar = evalToggle.checked;
+    try {
+      localStorage.setItem(EVAL_KEY, showEvalBar ? '1' : '0');
+    } catch (e) {
+      // ignore: preference just won't persist
+    }
+    updateEvalBar();
+  });
 
   function startFreshGame(config) {
     if (config) engine = new CheckersEngine(config);
@@ -163,6 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ? `1 Player · Lv ${currentConfig.aiLevel}`
       : '2 Players';
     modeTag.textContent = `${variantText} • ${rowText} • ${playersText}`;
+
+    updateEvalBar();
 
     // Message Banner
     if (engine.isMultiJumping) {
